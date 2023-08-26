@@ -4,11 +4,9 @@ from sensor_msgs.msg import Image
 import cv2
 from cv_bridge import CvBridge
 from ultralytics import YOLO
-import time
 from enum import Enum
 
-
-model = YOLO("/root/roboboat_ws/models/V8_model.pt")
+model = YOLO(f"/root/roboboat_ws/src/boat_ctrl/boat_ctrl/V8_model.pt")
 
 class CameraSubscriber(Node):
     def __init__(self):
@@ -17,14 +15,6 @@ class CameraSubscriber(Node):
         
     def callback(self, data: Image):
         self.camera_output = CvBridge().imgmsg_to_cv2(data, "bgr8")
-        
-        # cap = cv2.VideoCapture()
-        
-        # start_time = time.perf_counter()
-        
-        # display_time = 1
-        # fc = 0
-        # FPS = 0
 
         # Hack to get color picker inside vscode
         class rgb():
@@ -53,26 +43,13 @@ class CameraSubscriber(Node):
             "yellow_ball": rgb(255, 255, 0),
         }
 
-
-        # while True:
-            # TIME = time.perf_counter() - start_time
-        # _, frame = cap.read()
         frame = self.camera_output
         original_frame = self.camera_output
         x_scale_factor = original_frame.shape[1] / 640
         y_scale_factor = original_frame.shape[0] / 640
         x_orig, y_orig = original_frame.shape[1], original_frame.shape[0]
         frame = cv2.resize(frame, (640, 640))
-        # fc += 1
 
-        # if (TIME) >= display_time :
-        #     FPS = fc / (TIME)
-        #     fc = 0
-        #     start_time = time.perf_counter()
-
-        # fps_disp = "FPS: "+str(FPS)[:5]
-        
-        #frame = cv2.resize(frame, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
         result = model(frame)
 
         for pred in result:

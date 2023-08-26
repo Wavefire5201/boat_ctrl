@@ -11,8 +11,8 @@ class CameraSubscriber(Node):
         
     def callback(self, data: Image):
         self.camera_output = CvBridge().imgmsg_to_cv2(data, "bgr8")
-        # cv2.imshow("boat_output", self.camera_output)
-        # cv2.waitKey(1)
+        cv2.imshow("boat_output", self.camera_output)
+        cv2.waitKey(1)
 
 def main(args=None):
     rclpy.init(args=args)

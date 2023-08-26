@@ -34,7 +34,6 @@ class ControllerPublisher(Node):
         stdscr.refresh()
         
         # Create window with updating movement info
-        
         output_win = curses.newwin(0, 0, 12, 0)
         
         while True:
@@ -44,33 +43,21 @@ class ControllerPublisher(Node):
                     case "w":
                         left.data += 10
                         right.data += 10
-                        output_win.clear()
-                        output_win.addstr(f"currently:   left: {left.data}  right: {right.data}")
-                        output_win.refresh()
                     case "a":
                         left.data -= 10
                         right.data += 10
-                        output_win.clear()
-                        output_win.addstr(f"currently:   left: {left.data}  right: {right.data}")
-                        output_win.refresh()
                     case "s":
                         left.data = 0.0
                         right.data = 0.0
-                        output_win.clear()
-                        output_win.addstr(f"currently:   left: {left.data}  right: {right.data}")
-                        output_win.refresh()
                     case "d":
                         left.data += 10
                         right.data -= 10
-                        output_win.clear()
-                        output_win.addstr(f"currently:   left: {left.data}  right: {right.data}")
-                        output_win.refresh()
                     case "x":
                         left.data -= 10
                         right.data -= 10
-                        output_win.clear()
-                        output_win.addstr(f"currently:   left: {left.data}  right: {right.data}")
-                        output_win.refresh() 
+                output_win.clear()
+                output_win.addstr(f"currently:   left: {left.data}  right: {right.data}")
+                output_win.refresh()
                         
             except KeyboardInterrupt:
                 left.data = 0.0
