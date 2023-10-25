@@ -5,7 +5,7 @@ import struct
 
 class LidarSubscriber(Node):
     def __init__(self):
-        super().__init__("camera_subscriber")
+        super().__init__("lidar_subscriber")
         self.create_subscription(PointCloud2, "/wamv/sensors/lidars/lidar_wamv_sensor/points", self.callback, 10)
         
     def callback(self, msg: PointCloud2):

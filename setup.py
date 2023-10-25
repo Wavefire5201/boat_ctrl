@@ -22,7 +22,7 @@ setup(
         'console_scripts': [
             "controller = boat_ctrl.controller:main",
             "camera = boat_ctrl.camera:main",
-            "bouy = boat_ctrl.bouy_recognition:main",
+            "buoy = boat_ctrl.buoy_recognition:main",
             "lidar = boat_ctrl.lidar:main"
         ],
     },

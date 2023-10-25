@@ -22,4 +22,4 @@ ros2 run boat_ctrl <entry_point>
 - controller - control boat
 - lidar - view ``PointCloud2`` data
 - camera - view front camera output
-- bouy - front camera output but with Bouy Detection AI
+- buoy - front camera output but with Buoy Detection AI
