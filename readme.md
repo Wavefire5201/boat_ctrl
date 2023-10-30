@@ -23,3 +23,6 @@ ros2 run boat_ctrl <entry_point>
 - lidar - view ``PointCloud2`` data
 - camera - view front camera output
 - buoy - front camera output but with Buoy Detection AI
+- taskone - Task one!
+> Note: to run buoy and taskone, you need to install ultralytics with pip
+> `pip install ultralytics`
