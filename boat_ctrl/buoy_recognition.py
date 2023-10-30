@@ -7,7 +7,7 @@ from ultralytics import YOLO
 from enum import Enum
 
 model = YOLO(f"/root/roboboat_ws/src/boat_ctrl/boat_ctrl/V9_model.pt")
-model.to("cuda")
+
 class CameraSubscriber(Node):
     def __init__(self):
         super().__init__("camera_subscriber")
