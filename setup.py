@@ -23,7 +23,9 @@ setup(
             "controller = boat_ctrl.controller:main",
             "camera = boat_ctrl.camera:main",
             "buoy = boat_ctrl.buoy_recognition:main",
-            "lidar = boat_ctrl.lidar:main"
+            "lidar = boat_ctrl.lidar:main",
+            "locate_buoys = boat_ctrl.locate_buoys:main",
+            "center_of_clusters = boat_ctrl.center_of_clusters:main"
         ],
     },
 )
