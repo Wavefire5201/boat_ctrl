@@ -178,19 +178,19 @@ class TaskOne(Node):
         print(left_buoy)
         print(right_buoy)
 
+        # Calculate middle of two poles
+        buoy_middle = left_buoy["x_right"] + ((right_buoy["x_left"] - left_buoy["x_right"]) / 2)
+        
         # If both poles are on left side of boat, angle towards left
         # Vice versa for poles on right side of screen
-
-        #
-        buoy_middle = (left_buoy["x_right"] - right_buoy["x_left"]) / 2
-        if abs(SCREEN_MIDDLE - left_buoy["x_right"]) < abs(
-            SCREEN_MIDDLE - right_buoy["x_left"]
-        ):
-            buoy_middle = buoy_middle + SCREEN_MIDDLE
-        elif abs(SCREEN_MIDDLE - left_buoy["x_right"]) > abs(
-            SCREEN_MIDDLE - right_buoy["x_left"]
-        ):
-            buoy_middle = SCREEN_MIDDLE - buoy_middle
+        # if abs(SCREEN_MIDDLE - left_buoy["x_right"]) < abs(
+        #     SCREEN_MIDDLE - right_buoy["x_left"]
+        # ):
+        #     buoy_middle = buoy_middle + SCREEN_MIDDLE
+        # elif abs(SCREEN_MIDDLE - left_buoy["x_right"]) > abs(
+        #     SCREEN_MIDDLE - right_buoy["x_left"]
+        # ):
+        #     buoy_middle = SCREEN_MIDDLE - buoy_middle
 
         print(buoy_middle)
 
@@ -208,18 +208,18 @@ class TaskOne(Node):
             print("TWO BUOYS ON RIGHT SIDE OF SCREEN")
             self.left.data = 50.0
             self.right.data = -50.0
-        elif SCREEN_MIDDLE - buoy_middle <= 10:
+        elif buoy_middle - SCREEN_MIDDLE > 5:
+            print("TOO LEFT")
+            self.left.data = 10.0
+            self.right.data = -10.0
+        elif SCREEN_MIDDLE - buoy_middle > 5:
+            print("TOO RIGHT")
+            self.left.data = -10.0
+            self.right.data = 10.0
+        elif SCREEN_MIDDLE - buoy_middle < 5 and buoy_middle - SCREEN_MIDDLE < 5:
             print("MOVING FORWARD")
             self.left.data = 200.0
             self.right.data = 200.0
-        elif SCREEN_MIDDLE - buoy_middle >= 10:
-            print("TOO RIGHT")
-            self.left.data = 50.0
-            self.right.data = -50.0
-        elif buoy_middle - SCREEN_MIDDLE >= 10:
-            print("TOO LEFT")
-            self.left.data = -50.0
-            self.right.data = 50.0
 
         self.left_pub.publish(self.left)
         self.right_pub.publish(self.right)
