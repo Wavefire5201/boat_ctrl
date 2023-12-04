@@ -24,6 +24,9 @@ setup(
             "buoy = boat_ctrl.buoy_recognition:main",
             "lidar = boat_ctrl.lidar:main",
             "taskone = boat_ctrl.taskone:main",
+            "tasktwo = boat_ctrl.tasktwo:main",
+            "locate_buoys = boat_ctrl.locate_buoys:main",
+            "center_of_clusters = boat_ctrl.center_of_clusters:main",
         ],
     },
 )
