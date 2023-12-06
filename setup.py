@@ -27,6 +27,7 @@ setup(
             "tasktwo = boat_ctrl.tasktwo:main",
             "locate_buoys = boat_ctrl.locate_buoys:main",
             "center_of_clusters = boat_ctrl.center_of_clusters:main",
+            "buoy_jonathan = boat_ctrl.buoy_recognition_jonathan:main", 
         ],
     },
 )
