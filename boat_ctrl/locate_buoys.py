@@ -19,136 +19,156 @@ class locate_buoys(Node):
         self.latitudes = []
         self.longitudes = []
         self.buoy_types = []
-        
-        #subscribes to AI Output
+
+        # subscribes to AI Output
         self.AiOutput_subscriber = self.create_subscription(
-            AiOutput, "/AiOutput", self.camera_callback, 10)
+            AiOutput, "/AiOutput", self.camera_callback, 10
+        )
 
-        #subscribes to the center of cluster pointcloud
+        # subscribes to the center of cluster pointcloud
         self.lidarOutput_subscriber = self.create_subscription(
-                PointCloud2, "/center_of_clusters", self.lidar_callback,10)
-        
-        #subscribes to the GPS location
+            PointCloud2, "/center_of_clusters", self.lidar_callback, 10
+        )
+
+        # subscribes to the GPS location
         self.gps_subscriber = self.create_subscription(
-                NavSatFix, "/wamv/sensors/gps/gps/fix", self.gps_callback,10)
+            NavSatFix, "/wamv/sensors/gps/gps/fix", self.gps_callback, 10
+        )
 
-        #publishes buoy coordinates and types
-        #float64[] latitudes
-        #float64[] longitudes
-        #string[] types
-        self.coordinate_publisher = self.create_publisher(BuoyCoordinates, 'BuoyCoordinates',10)
-   
-        timer_period = .5
-        self.timer = self.create_timer(timer_period,self.publish_coordinates)
+        # publishes buoy coordinates and types
+        # float64[] latitudes
+        # float64[] longitudes
+        # string[] types
+        self.coordinate_publisher = self.create_publisher(
+            BuoyCoordinates, "BuoyCoordinates", 10
+        )
 
-    def camera_callback(self, cameraAi_output:AiOutput):
+        timer_period = 0.5
+        self.timer = self.create_timer(timer_period, self.publish_coordinates)
+
+    def camera_callback(self, cameraAi_output: AiOutput):
         self.get_logger().info(str(cameraAi_output))
-        self.latitudes, self.longitudes, self.buoy_types = analyze(cameraAi_output, self.pointCloud,self.current_lat,self.current_long)
+        self.latitudes, self.longitudes, self.buoy_types = analyze(
+            cameraAi_output, self.pointCloud, self.current_lat, self.current_long
+        )
 
-    def lidar_callback(self,clusterCenters:PointCloud2):
+    def lidar_callback(self, clusterCenters: PointCloud2):
         self.pointCloud = clusterCenters
-        
-    def gps_callback(self,data:NavSatFix):
+
+    def gps_callback(self, data: NavSatFix):
         self.current_lat = data.latitude
         self.current_long = data.longitude
 
     def publish_coordinates(self):
-        self.coordinate_publisher.publish(BuoyCoordinates(latitudes=self.latitudes,longitudes=self.longitudes,types=self.buoy_types))
+        self.coordinate_publisher.publish(
+            BuoyCoordinates(
+                latitudes=self.latitudes,
+                longitudes=self.longitudes,
+                types=self.buoy_types,
+            )
+        )
 
-def analyze(cameraAi_output,pointCloud,current_lat,current_long):
+
+def analyze(cameraAi_output, pointCloud, current_lat, current_long):
     latitudes = []
     longitudes = []
     buoy_types = []
     for i in range(cameraAi_output.num):
-        #calculate the 3D angle of each buoy location
-        #returns a list of the left/right angle (theta) and the up/down angle (phi)
+        # calculate the 3D angle of each buoy location
+        # returns a list of the left/right angle (theta) and the up/down angle (phi)
         theta, phi = get_angle(cameraAi_output, i)
 
-        #Use angle to get the XYZ coordinates of each buoy
-        #returns X, Y, Z
-        x, y, z = get_XYZ_coordinates(theta,phi,pointCloud,cameraAi_output.types[i])
-        
-        #skip point if no associated lidar points
-        if(x==0 and y==0 and z==0):
+        # Use angle to get the XYZ coordinates of each buoy
+        # returns X, Y, Z
+        x, y, z = get_XYZ_coordinates(theta, phi, pointCloud, cameraAi_output.types[i])
+
+        # skip point if no associated lidar points
+        if x == 0 and y == 0 and z == 0:
             continue
-        #convert the X,Y,Z coordinates into latitutde and longitude coordinates
-        #returns latitude (lat) and longitude (long)
-        lat, long = convert_to_lat_long(x,y,current_lat,current_long)
-        
+        # convert the X,Y,Z coordinates into latitutde and longitude coordinates
+        # returns latitude (lat) and longitude (long)
+        lat, long = convert_to_lat_long(x, y, current_lat, current_long)
+
         latitudes.append(lat)
         longitudes.append(long)
         buoy_types.append(cameraAi_output.types[i])
     return latitudes, longitudes, buoy_types
 
 
-#calculate the 3D angle of each buoy location
-#returns a list of the left/right angle (theta) and the up/down angle (phi)
-def get_angle(cameraAi_output,index):
-    #currently the FOV of the simulated camera
-    #replace with FOV of real camera
+# calculate the 3D angle of each buoy location
+# returns a list of the left/right angle (theta) and the up/down angle (phi)
+def get_angle(cameraAi_output, index):
+    # currently the FOV of the simulated camera
+    # replace with FOV of real camera
     FOV_H = 80
     FOV_V = 56
 
-    midX = cameraAi_output.lefts[index]+cameraAi_output.widths[index]/2
-    midY = cameraAi_output.tops[index]+cameraAi_output.heights[index]/2
+    midX = cameraAi_output.lefts[index] + cameraAi_output.widths[index] / 2
+    midY = cameraAi_output.tops[index] + cameraAi_output.heights[index] / 2
 
     width = cameraAi_output.img_width
     height = cameraAi_output.img_height
 
-    degreesPerPixelH = FOV_H/width
-    degreesPerPixelV = FOV_V/height
+    degreesPerPixelH = FOV_H / width
+    degreesPerPixelV = FOV_V / height
 
-    theta = midX * degreesPerPixelH - FOV_H/2
-    phi = (midY * degreesPerPixelV - FOV_V/2 + 15.5) * -1
-    #add 15.5 because camera is at slight angle down and the 15.5 corrects for it
-    #shouldn't be a problem when the camera is mounted horizontally on the real boat
+    theta = midX * degreesPerPixelH - FOV_H / 2
+    phi = (midY * degreesPerPixelV - FOV_V / 2 + 15.5) * -1
+    # add 15.5 because camera is at slight angle down and the 15.5 corrects for it
+    # shouldn't be a problem when the camera is mounted horizontally on the real boat
 
     return theta, phi
-    
 
-#Use angle to get the XYZ coordinates of each buoy
-#returns X, Y, Z
+
+# Use angle to get the XYZ coordinates of each buoy
+# returns X, Y, Z
 def get_XYZ_coordinates(theta, phi, pointCloud, name):
     points = np.array(list(read_points(pointCloud)))
-    mask = np.empty(points.shape[0],dtype=bool)
+    mask = np.empty(points.shape[0], dtype=bool)
     for index, point in enumerate(points):
-        x=point[0]
-        y=point[1]
-        z=point[2]
+        x = point[0]
+        y = point[1]
+        z = point[2]
         r = math.sqrt(x**2 + y**2 + z**2)
-        
-        ### calculate angle from x axis, the camera always points towards the x axis so we only care about lidar points near the x axis
-        #might have to change if camera doesn't point towards real lidar's x asix
 
-        thetaPoint = math.degrees(math.acos(x/math.sqrt(x**2+y**2))) * y/abs(y)* -1
-        phiPoint = math.degrees(math.acos(x/math.sqrt(x**2+z**2))) * z/abs(z)
-       
-        #if theta and phi are in list by some closeness
-        #keep point, else delete point
-        mask[index] = not (math.fabs(thetaPoint-theta)<=5 and math.fabs(phiPoint-phi)<=5)
-    
-    points = np.delete(points,mask,axis=0)
+        ### calculate angle from x axis, the camera always points towards the x axis so we only care about lidar points near the x axis
+        # might have to change if camera doesn't point towards real lidar's x asix
+
+        thetaPoint = (
+            math.degrees(math.acos(x / math.sqrt(x**2 + y**2))) * y / abs(y) * -1
+        )
+        phiPoint = math.degrees(math.acos(x / math.sqrt(x**2 + z**2))) * z / abs(z)
+
+        # if theta and phi are in list by some closeness
+        # keep point, else delete point
+        mask[index] = not (
+            math.fabs(thetaPoint - theta) <= 5 and math.fabs(phiPoint - phi) <= 5
+        )
+
+    points = np.delete(points, mask, axis=0)
 
     print(name)
-    print("after points: "+str(points))
-    if(len(points)>1):
-        rp = np.mean(points,axis=0)
+    print("after points: " + str(points))
+    if len(points) > 1:
+        rp = np.mean(points, axis=0)
         return rp[0], rp[1], rp[2]
-    if(len(points)==0):
-        return (0,0,0)
+    if len(points) == 0:
+        return (0, 0, 0)
     return (points[0][0], points[0][1], points[0][2])
 
-#convert the X,Y,Z coordinates into latitutde and longitude coordinates
-#returns latitude (lat) and longitude (long)
-def convert_to_lat_long(x,y,current_lat,current_long):
+
+# convert the X,Y,Z coordinates into latitutde and longitude coordinates
+# returns latitude (lat) and longitude (long)
+def convert_to_lat_long(x, y, current_lat, current_long):
     rad_earth = 6378.137
     pi = math.pi
-    delta_lat_m = (x/ ((2 * pi / 360) * rad_earth)) / 1000
-    delta_long_m = (y/ ((2 * pi / 360) * rad_earth)) / 1000
+    delta_lat_m = (x / ((2 * pi / 360) * rad_earth)) / 1000
+    delta_long_m = (y / ((2 * pi / 360) * rad_earth)) / 1000
 
     new_lat = current_lat + delta_lat_m
-    new_long = current_long + delta_long_m / math.cos(delta_lat_m * (pi/180))
+    new_long = current_long + delta_long_m / math.cos(delta_lat_m * (pi / 180))
     return new_lat, new_long
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -156,7 +176,8 @@ def main(args=None):
     rclpy.spin(node)
     rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
 
 
@@ -167,14 +188,15 @@ import math
 import struct
 
 _DATATYPES = {}
-_DATATYPES[PointField.INT8]    = ('b', 1)
-_DATATYPES[PointField.UINT8]   = ('B', 1)
-_DATATYPES[PointField.INT16]   = ('h', 2)
-_DATATYPES[PointField.UINT16]  = ('H', 2)
-_DATATYPES[PointField.INT32]   = ('i', 4)
-_DATATYPES[PointField.UINT32]  = ('I', 4)
-_DATATYPES[PointField.FLOAT32] = ('f', 4)
-_DATATYPES[PointField.FLOAT64] = ('d', 8)
+_DATATYPES[PointField.INT8] = ("b", 1)
+_DATATYPES[PointField.UINT8] = ("B", 1)
+_DATATYPES[PointField.INT16] = ("h", 2)
+_DATATYPES[PointField.UINT16] = ("H", 2)
+_DATATYPES[PointField.INT32] = ("i", 4)
+_DATATYPES[PointField.UINT32] = ("I", 4)
+_DATATYPES[PointField.FLOAT32] = ("f", 4)
+_DATATYPES[PointField.FLOAT64] = ("d", 8)
+
 
 def read_points(cloud, field_names=None, skip_nans=False, uvs=[]):
     """
@@ -190,9 +212,16 @@ def read_points(cloud, field_names=None, skip_nans=False, uvs=[]):
     @return: Generator which yields a list of values for each point.
     @rtype:  generator
     """
-    assert isinstance(cloud, PointCloud2), 'cloud is not a sensor_msgs.msg.PointCloud2'
+    assert isinstance(cloud, PointCloud2), "cloud is not a sensor_msgs.msg.PointCloud2"
     fmt = _get_struct_fmt(cloud.is_bigendian, cloud.fields, field_names)
-    width, height, point_step, row_step, data, isnan = cloud.width, cloud.height, cloud.point_step, cloud.row_step, cloud.data, math.isnan
+    width, height, point_step, row_step, data, isnan = (
+        cloud.width,
+        cloud.height,
+        cloud.point_step,
+        cloud.row_step,
+        cloud.data,
+        math.isnan,
+    )
     unpack_from = struct.Struct(fmt).unpack_from
 
     if skip_nans:
@@ -230,19 +259,27 @@ def read_points(cloud, field_names=None, skip_nans=False, uvs=[]):
                     yield unpack_from(data, offset)
                     offset += point_step
 
+
 def _get_struct_fmt(is_bigendian, fields, field_names=None):
-    fmt = '>' if is_bigendian else '<'
+    fmt = ">" if is_bigendian else "<"
 
     offset = 0
-    for field in (f for f in sorted(fields, key=lambda f: f.offset) if field_names is None or f.name in field_names):
+    for field in (
+        f
+        for f in sorted(fields, key=lambda f: f.offset)
+        if field_names is None or f.name in field_names
+    ):
         if offset < field.offset:
-            fmt += 'x' * (field.offset - offset)
+            fmt += "x" * (field.offset - offset)
             offset = field.offset
         if field.datatype not in _DATATYPES:
-            print('Skipping unknown PointField datatype [%d]' % field.datatype, file=sys.stderr)
+            print(
+                "Skipping unknown PointField datatype [%d]" % field.datatype,
+                file=sys.stderr,
+            )
         else:
             datatype_fmt, datatype_length = _DATATYPES[field.datatype]
-            fmt    += field.count * datatype_fmt
+            fmt += field.count * datatype_fmt
             offset += field.count * datatype_length
 
     return fmt
