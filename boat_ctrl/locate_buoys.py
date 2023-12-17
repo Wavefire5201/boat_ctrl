@@ -2,7 +2,8 @@
 import rclpy
 from rclpy.node import Node
 import sensor_msgs.msg as sensor_msgs
-from sensor_msgs.msg import PointCloud2, PointField, NavSatFix
+from sensor_msgs.msg import PointCloud2, PointField, NavSatFix, Imu
+from geometry_msgs.msg import Quaternion
 import math
 import numpy as np
 from boat_interfaces.msg import AiOutput
@@ -19,6 +20,7 @@ class locate_buoys(Node):
         self.latitudes = []
         self.longitudes = []
         self.buoy_types = []
+        self.quaternion = []
         
         #subscribes to AI Output
         self.AiOutput_subscriber = self.create_subscription(
@@ -31,6 +33,10 @@ class locate_buoys(Node):
         #subscribes to the GPS location
         self.gps_subscriber = self.create_subscription(
                 NavSatFix, "/wamv/sensors/gps/gps/fix", self.gps_callback,10)
+        
+        #subscribes to the boat orientation
+        self.imu_subscriber = self.create_subscription(
+                Imu, "/wamv/sensors/imu/imu/data", self.imu_callback,10)
 
         #publishes buoy coordinates and types
         #float64[] latitudes
@@ -43,7 +49,7 @@ class locate_buoys(Node):
 
     def camera_callback(self, cameraAi_output:AiOutput):
         self.get_logger().info(str(cameraAi_output))
-        self.latitudes, self.longitudes, self.buoy_types = analyze(cameraAi_output, self.pointCloud,self.current_lat,self.current_long)
+        self.latitudes, self.longitudes, self.buoy_types = analyze(cameraAi_output, self.pointCloud,self.current_lat,self.current_long,self.quaternion)
 
     def lidar_callback(self,clusterCenters:PointCloud2):
         self.pointCloud = clusterCenters
@@ -52,16 +58,19 @@ class locate_buoys(Node):
         self.current_lat = data.latitude
         self.current_long = data.longitude
 
+    def imu_callback(self,data:Imu):
+        self.quaternion = data.orientation
+
     def publish_coordinates(self):
         self.coordinate_publisher.publish(BuoyCoordinates(latitudes=self.latitudes,longitudes=self.longitudes,types=self.buoy_types))
 
-def analyze(cameraAi_output,pointCloud,current_lat,current_long):
+def analyze(cameraAi_output,pointCloud,current_lat,current_long,quaternion):
     latitudes = []
     longitudes = []
     buoy_types = []
     for i in range(cameraAi_output.num):
         #calculate the 3D angle of each buoy location
-        #returns a list of the left/right angle (theta) and the up/down angle (phi)
+        #returns a list of the left/right angle (theta) and the up/down angle (phi) relative to boat
         theta, phi = get_angle(cameraAi_output, i)
 
         #Use angle to get the XYZ coordinates of each buoy
@@ -73,7 +82,7 @@ def analyze(cameraAi_output,pointCloud,current_lat,current_long):
             continue
         #convert the X,Y,Z coordinates into latitutde and longitude coordinates
         #returns latitude (lat) and longitude (long)
-        lat, long = convert_to_lat_long(x,y,current_lat,current_long)
+        lat, long = convert_to_lat_long(x,y,current_lat,current_long,quaternion,theta)
         
         latitudes.append(lat)
         longitudes.append(long)
@@ -140,11 +149,22 @@ def get_XYZ_coordinates(theta, phi, pointCloud, name):
 
 #convert the X,Y,Z coordinates into latitutde and longitude coordinates
 #returns latitude (lat) and longitude (long)
-def convert_to_lat_long(x,y,current_lat,current_long):
+def convert_to_lat_long(x,y,current_lat,current_long,q,theta):
+    #yaw of 0 is due east
+    yaw = math.degrees(math.atan2(2.0*(q.z*q.w + q.x*q.y), 1.0 - 2.0 * (q.y*q.y + q.z*q.z)))
+    print("yaw: "+str(yaw)+" theta: "+str(theta))
+
+    distance = math.sqrt(x**2+y**2)
+    
+    easting = distance*math.cos(math.radians(theta-yaw))
+    northing = distance*math.sin(math.radians(theta-yaw)) * -1
+    print("distance: "+str(distance))
+    print("easting: "+str(easting))
+    print("northing: "+str(northing))
     rad_earth = 6378.137
     pi = math.pi
-    delta_lat_m = (x/ ((2 * pi / 360) * rad_earth)) / 1000
-    delta_long_m = (y/ ((2 * pi / 360) * rad_earth)) / 1000
+    delta_lat_m = (easting/ ((2 * pi / 360) * rad_earth)) / 1000
+    delta_long_m = (northing/ ((2 * pi / 360) * rad_earth)) / 1000
 
     new_lat = current_lat + delta_lat_m
     new_long = current_long + delta_long_m / math.cos(delta_lat_m * (pi/180))
