@@ -23,6 +23,7 @@ setup(
             "camera = boat_ctrl.camera:main",
             "buoy = boat_ctrl.buoy_recognition:main",
             "arm_boat = boat_ctrl.armboat:main",
+            "mavros_controller = boat_ctrl.mavros_controller:main",
             "lidar = boat_ctrl.lidar:main",
             "taskone = boat_ctrl.taskone:main",
             "tasktwo = boat_ctrl.tasktwo:main",
