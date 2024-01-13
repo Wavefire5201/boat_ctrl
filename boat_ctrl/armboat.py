@@ -33,7 +33,7 @@ class MavrosServiceCaller(Node):
     
     def set_mode(self, mode):
         request = SetMode.Request()
-        request.custom_mode = self.modes[mode]
+        request.base_mode = self.modes[mode]
         self.future = self.mode_service.call_async(request)
         rclpy.spin_until_future_complete(self, self.future)
         return self.future.result()
