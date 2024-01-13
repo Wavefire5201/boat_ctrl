@@ -40,18 +40,17 @@ class MavRosController(Node):
         while True:
             try:
                 input = stdscr.getkey()
-                match input:
-                    case "w":
+                if input == "w":
                         twist.twist.linear.x += 10
-                    case "a":
-                        twist.twist.angular.z += 10
-                    case "s":
-                        twist.twist.linear.x = 0.0
-                        twist.twist.angular.z = 0.0
-                    case "d":
-                        twist.twist.angular.z -= 10
-                    case "x":
-                        twist.twist.linear.x -= 10
+                elif input == "a":
+                    twist.twist.angular.z += 10
+                elif input == "s":
+                    twist.twist.linear.x = 0.0
+                    twist.twist.angular.z = 0.0
+                elif input == "d":
+                    twist.twist.angular.z -= 10
+                elif input == "x":
+                    twist.twist.linear.x -= 10
                 output_win.clear()
                 output_win.addstr(f"currently:   linear: {twist.twist.linear.x}  angular: {twist.twist.angular.z}")
                 output_win.refresh()
