@@ -6,13 +6,12 @@ from std_msgs.msg._float64 import Float64
 from cv_bridge import CvBridge
 import cv2
 from ultralytics import YOLO
-from enum import Enum
 
 
-model = YOLO(f"/root/roboboat_ws/src/boat_ctrl/boat_ctrl/V9_model.pt")
+model = YOLO(f"/root/ros_ws/src/boat_ctrl/boat_ctrl/V9_model.pt")
 
 # SCREEN_SIZE = 1280x720
-SCREEN_MIDDLE = 1280 / 2
+SCREEN_MIDDLE = 640 / 2
 
 
 class TaskOne(Node):
@@ -20,7 +19,7 @@ class TaskOne(Node):
         super().__init__("taskone")
         self.create_subscription(
             Image,
-            "/wamv/sensors/cameras/front_left_camera_sensor/optical/image_raw",
+            "/color/image_raw",
             self.callback,
             10,
         )
@@ -80,7 +79,7 @@ class TaskOne(Node):
         x_orig, y_orig = original_frame.shape[1], original_frame.shape[0]
         frame = cv2.resize(frame, (640, 640))
 
-        result = model(frame)
+        result = model(frame, verbose=False)
 
         poles = []
 
@@ -108,16 +107,15 @@ class TaskOne(Node):
                     length_y = int(bounding_box[3]) - int(bounding_box[1])
                     area = length_x * length_y
                     # Filtering out weird pole data on bottom of screen
-                    if y_top < 535:
-                        pole_data = {
-                            "name": name,
-                            "area": area,
-                            "x_left": x_left,
-                            "x_right": x_right,
-                            "y_top": y_top,
-                            "y_bottom": y_bottom,
-                        }
-                        poles.append(pole_data)
+                    pole_data = {
+                        "name": name,
+                        "area": area,
+                        "x_left": x_left,
+                        "x_right": x_right,
+                        "y_top": y_top,
+                        "y_bottom": y_bottom,
+                    }
+                    poles.append(pole_data)
 
                 # print(f"{name} {int(confidence*100)}% {bounding_box}")
 
@@ -152,6 +150,7 @@ class TaskOne(Node):
             self.right.data = 50.0
             self.left_pub.publish(self.left)
             self.right_pub.publish(self.right)
+            cv2.imshow("result", original_frame)
             return
 
         # Sort the list of poles by area in descending order
@@ -161,11 +160,12 @@ class TaskOne(Node):
 
         if poles[0]["name"] == poles[1]["name"]:
             print("Two poles of same color found, keep going forward")
+            cv2.imshow("result", original_frame)
             return
 
         # poles = get_closest_buoy(poles)
         # print("two largest area (closest)")
-        print(poles)
+        # print(poles)
 
         # Set left pole and right pole based on x values
         if poles[0]["x_left"] > poles[1]["x_left"]:
@@ -175,11 +175,14 @@ class TaskOne(Node):
             left_buoy = poles[0]
             right_buoy = poles[1]
 
-        print(left_buoy)
-        print(right_buoy)
+        # print(left_buoy)
+        # print(right_buoy)
 
         # Calculate middle of two poles
-        buoy_middle = left_buoy["x_right"] + ((right_buoy["x_left"] - left_buoy["x_right"]) / 2)
+        buoy_middle_x = left_buoy["x_right"] + ((right_buoy["x_left"] - left_buoy["x_right"]) / 2)
+
+        # cv2.line(image, start_point, end_point, color, thickness) 
+        original_frame = cv2.line(original_frame, (int(buoy_middle_x), int(left_buoy["y_top"])), ((int(buoy_middle_x), int(left_buoy["y_bottom"]))), (255, 0, 0), 2)
         
         # If both poles are on left side of boat, angle towards left
         # Vice versa for poles on right side of screen
@@ -192,7 +195,8 @@ class TaskOne(Node):
         # ):
         #     buoy_middle = SCREEN_MIDDLE - buoy_middle
 
-        print(buoy_middle)
+        print(buoy_middle_x)
+        print(original_frame.shape[1])
 
         if (
             left_buoy["x_right"] < SCREEN_MIDDLE
@@ -208,15 +212,15 @@ class TaskOne(Node):
             print("TWO BUOYS ON RIGHT SIDE OF SCREEN")
             self.left.data = 50.0
             self.right.data = -50.0
-        elif buoy_middle - SCREEN_MIDDLE > 5:
+        elif buoy_middle_x - SCREEN_MIDDLE > 5:
             print("TOO LEFT")
             self.left.data = 10.0
             self.right.data = -10.0
-        elif SCREEN_MIDDLE - buoy_middle > 5:
+        elif SCREEN_MIDDLE - buoy_middle_x > 5:
             print("TOO RIGHT")
             self.left.data = -10.0
             self.right.data = 10.0
-        elif SCREEN_MIDDLE - buoy_middle < 5 and buoy_middle - SCREEN_MIDDLE < 5:
+        elif SCREEN_MIDDLE - buoy_middle_x < 5 and buoy_middle_x - SCREEN_MIDDLE < 5:
             print("MOVING FORWARD")
             self.left.data = 200.0
             self.right.data = 200.0
@@ -230,7 +234,7 @@ class TaskOne(Node):
 
 """
 buoy_middle = (left_buoy["x_right"] - right_buoy["x_left"]) / 2 + SCREEN_SIZE
-
+buoy_middle_y = left_buoy["y_top"] + ((right_buoy["y_bottom"] - left_buoy["y_top"]) / 2)
 """
 
 
@@ -240,7 +244,6 @@ def main(args=None):
     rclpy.spin(taskone)
     taskone.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()

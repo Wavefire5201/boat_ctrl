@@ -21,8 +21,10 @@ setup(
         "console_scripts": [
             "controller = boat_ctrl.controller:main",
             "camera = boat_ctrl.camera:main",
+            "camera_processing = boat_ctrl.camera_processing:main",
             "buoy = boat_ctrl.buoy_recognition:main",
-            "arm_boat = boat_ctrl.armboat:main",
+            "arm = boat_ctrl.arm_boat:main",
+            "mode = boat_ctrl.boat_mode:main", 
             "mavros_controller = boat_ctrl.mavros_controller:main",
             "lidar = boat_ctrl.lidar:main",
             "taskone = boat_ctrl.taskone:main",
@@ -30,6 +32,7 @@ setup(
             "locate_buoys = boat_ctrl.locate_buoys:main",
             "center_of_clusters = boat_ctrl.center_of_clusters:main",
             "buoy_jonathan = boat_ctrl.buoy_recognition_jonathan:main", 
+            "taskone_mavros = boat_ctrl.taskone_mavros:main",
         ],
-    },
+    },  
 )
