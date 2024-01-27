@@ -3,6 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import TwistStamped, Vector3
 import curses
 from curses import wrapper
+import time
 
 class MavRosController(Node):
     def __init__(self):
@@ -40,21 +41,25 @@ class MavRosController(Node):
         while True:
             try:
                 input = stdscr.getkey()
+                
                 if input == "w":
-                        twist.twist.linear.x += 1
+                    twist.twist.linear.x += 1
                 elif input == "a":
                     twist.twist.angular.z += 1
                 elif input == "s":
                     twist.twist.linear.x = 0.0
                     twist.twist.angular.z = 0.0
+                    twist.twist.linear.y = 0.0
                 elif input == "d":
                     twist.twist.angular.z -= 1
                 elif input == "x":
-                    twist.twist.linear.x -= 1
+                    # twist.twist.linear.x -= 1
+                    twist.twist.linear.y -= 1
+                    
                 output_win.clear()
-                output_win.addstr(f"currently:   linear: {twist.twist.linear.x}m/s  angular: {twist.twist.angular.z}m/s")
+                output_win.addstr(f"currently:   linear x: {twist.twist.linear.x}m/s  angular z: {twist.twist.angular.z}m/s linear y: {twist.twist.linear.y}m/s")
                 output_win.refresh()
-                        
+            
             except KeyboardInterrupt:
                 twist.twist.linear.x = 0.0
                 twist.twist.angular.z = 0.0
