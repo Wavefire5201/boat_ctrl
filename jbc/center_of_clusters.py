@@ -54,7 +54,7 @@ def point_cloud(msg,node):
     #print("after: "+str(len(points)))
 
     #cluster the points
-    db = DBSCAN(eps=.2, min_samples=5).fit(points)
+    db = DBSCAN(eps=.07, min_samples=5).fit(points)
     labels = db.labels_
     max = np.max(labels)
 

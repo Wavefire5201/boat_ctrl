@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, QoSLivelinessPolicy, QoSHistoryPolicy
 import sensor_msgs.msg as sensor_msgs
 from sensor_msgs.msg import PointCloud2, PointField, NavSatFix, Imu
 from geometry_msgs.msg import Quaternion
@@ -23,7 +24,15 @@ class locate_buoys(Node):
         self.tops = []
         self.ids = []
         self.buoy_types = []
-        self.quaternion = []
+        self.quaternion = Quaternion()
+        
+        qos_profile = QoSProfile(
+            depth=10,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            durability=QoSDurabilityPolicy.VOLATILE,
+            liveliness=QoSLivelinessPolicy.AUTOMATIC
+        )
         
         #subscribes to AI Output
         self.AiOutput_subscriber = self.create_subscription(
@@ -35,11 +44,11 @@ class locate_buoys(Node):
         
         #subscribes to the GPS location
         self.gps_subscriber = self.create_subscription(
-                NavSatFix, "/wamv/sensors/gps/gps/fix", self.gps_callback,10)
+                NavSatFix, "/mavros/global_position/global", self.gps_callback,qos_profile)
         
         #subscribes to the boat orientation
         self.imu_subscriber = self.create_subscription(
-                Imu, "/wamv/sensors/imu/imu/data", self.imu_callback,10)
+                Imu, "/mavros/imu/data", self.imu_callback,qos_profile)
 
         #publishes buoy coordinates and types
         #float64[] latitudes
@@ -79,6 +88,7 @@ def analyze(cameraAi_output,pointCloud,current_lat,current_long,quaternion):
     for i in range(cameraAi_output.num):
         #calculate the 3D angle of each buoy location
         #returns a list of the left/right angle (theta) and the up/down angle (phi) relative to boat
+        print("num: "+str(cameraAi_output.num))
         theta, phi = get_angle(cameraAi_output, i)
 
         #Use angle to get the XYZ coordinates of each buoy
@@ -107,9 +117,11 @@ def analyze(cameraAi_output,pointCloud,current_lat,current_long,quaternion):
 def get_angle(cameraAi_output,index):
     #currently the FOV of the simulated camera
     #replace with FOV of real camera
-    FOV_H = 80
-    FOV_V = 56
+    FOV_H = 86
+    FOV_V = 57
 
+    print("index: "+str(index))
+    print("lefts: "+str(cameraAi_output.lefts))
     midX = cameraAi_output.lefts[index]+cameraAi_output.widths[index]/2
     midY = cameraAi_output.tops[index]+cameraAi_output.heights[index]/2
 
@@ -119,8 +131,12 @@ def get_angle(cameraAi_output,index):
     degreesPerPixelH = FOV_H/width
     degreesPerPixelV = FOV_V/height
 
+    print("midX: "+str(midX))
+    print("degreesPerPixelH: "+str(degreesPerPixelH))
+    print("FOV_H: "+str(FOV_H))
     theta = midX * degreesPerPixelH - FOV_H/2
-    phi = (midY * degreesPerPixelV - FOV_V/2 + 15.5) * -1
+    phi = midY * degreesPerPixelV - FOV_V/2
+    print("THETA: "+str(theta))
     #add 15.5 because camera is at slight angle down and the 15.5 corrects for it
     #shouldn't be a problem when the camera is mounted horizontally on the real boat
 
@@ -141,12 +157,22 @@ def get_XYZ_coordinates(theta, phi, pointCloud, name):
         ### calculate angle from x axis, the camera always points towards the x axis so we only care about lidar points near the x axis
         #might have to change if camera doesn't point towards real lidar's x asix
 
+
         thetaPoint = math.degrees(math.acos(x/math.sqrt(x**2+y**2))) * y/abs(y)* -1
         phiPoint = math.degrees(math.acos(x/math.sqrt(x**2+z**2))) * z/abs(z)
        
         #if theta and phi are in list by some closeness
         #keep point, else delete point
-        degrees = 10
+        degrees = 5
+        if (math.fabs(thetaPoint-theta)<=degrees or math.fabs(phiPoint-phi)<=degrees):
+            print("theta: "+str(theta))
+            print("thetaPoint: "+str(thetaPoint))
+            print("theta-theta: "+str(math.fabs(thetaPoint-theta)))
+            print()
+            print("phi: "+str(phi))
+            print("phiPoint: "+str(phiPoint))
+            print("phi-phi: "+str(math.fabs(phiPoint-phi)))
+            print("\n")
         mask[index] = not (math.fabs(thetaPoint-theta)<=degrees and math.fabs(phiPoint-phi)<=degrees)
     
     points = np.delete(points,mask,axis=0)
@@ -165,7 +191,11 @@ def get_XYZ_coordinates(theta, phi, pointCloud, name):
 def convert_to_lat_long(x,y,current_lat,current_long,q,theta):
     #yaw of 0 is due east
     yaw = math.degrees(math.atan2(2.0*(q.z*q.w + q.x*q.y), 1.0 - 2.0 * (q.y*q.y + q.z*q.z)))
+    yaw = 132
     print("yaw: "+str(yaw)+" theta: "+str(theta))
+    
+    #current_lat = 30
+    #current_long = 30
 
     distance = math.sqrt(x**2+y**2)
     

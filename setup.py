@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'boat_ctrl'
+package_name = 'jbc'
 
 setup(
     name=package_name,
@@ -20,15 +20,15 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "controller = boat_ctrl.controller:main",
-            "camera = boat_ctrl.camera:main",
-            "buoy = boat_ctrl.buoy_recognition:main",
-            "lidar = boat_ctrl.lidar:main",
-            "locate_buoys = boat_ctrl.locate_buoys:main",
-            "center_of_clusters = boat_ctrl.center_of_clusters:main",
-            "tasktwo = boat_ctrl.tasktwo:main",
-            "average_buoy_location = boat_ctrl.average_buoy_location:main",
-            "detect_radius = boat_ctrl.detect_radius:main"
+            "controller = jbc.controller:main",
+            "camera = jbc.camera:main",
+            "buoy = jbc.buoy_recognition:main",
+            "lidar = jbc.lidar:main",
+            "locate_buoys = jbc.locate_buoys:main",
+            "center_of_clusters = jbc.center_of_clusters:main",
+            "tasktwo = jbc.tasktwo:main",
+            "average_buoy_location = jbc.average_buoy_location:main",
+            "detect_radius = jbc.detect_radius:main"
         ],
     },
 )

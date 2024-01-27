@@ -1,3 +1,5 @@
+#!/usr/bin/env python3.10
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -14,15 +16,16 @@ import numpy as np
 from collections import defaultdict
 #from rgb import colors
 
-model = YOLO(f"/root/roboboat_ws/src/boat_ctrl/boat_ctrl/best.pt")
+model = YOLO(f"/root/ros_ws/src/jbc/jbc/best.pt")
 #model.to("cuda")
 class CameraSubscriber(Node):
     def __init__(self):
         super().__init__("camera_subscriber")
-        self.create_subscription(Image, "/wamv/sensors/cameras/front_left_camera_sensor/optical/image_raw", self.callback, 10)
+        #self.create_subscription(Image, "/wamv/sensors/cameras/front_left_camera_sensor/optical/image_raw", self.callback, 10)
+        self.create_subscription(Image, "/color/image_raw", self.callback, 10)
 
         #create publisher that publishes bounding box coordinates and size and buoy type
-        #int32 num -- num of buoys
+        #int32 num -- um of buoys
         #int32 img_width -- width of image
         #int32 img_height -- height of image
         #string[] types -- type of buoys
@@ -106,7 +109,7 @@ class CameraSubscriber(Node):
 
         self.camera_output = CvBridge().imgmsg_to_cv2(data, "bgr8")
         frame = self.camera_output
-        print("frame"+str(frame))
+        #print("frame"+str(frame))
         frame = cv2.resize(frame, FRAME_SIZE)
         x_scale_factor = frame.shape[1] / IN_SIZE[0]
         y_scale_factor = frame.shape[0] / IN_SIZE[1]
@@ -119,6 +122,7 @@ class CameraSubscriber(Node):
 
         original_frame = frame.copy()
         frame = cv2.resize(frame, IN_SIZE)
+        #print("frame size?: "+str(cv2.size(frame)))
 
         frame_area = frame.shape[0] * frame.shape[1]
 
@@ -267,7 +271,7 @@ class CameraSubscriber(Node):
                     heights[j] = tempHeights
                     
 
-        self.output = AiOutput(num=num,img_width=data.width,img_height=data.height,types=types,confidences=confidences,lefts=lefts,tops=tops,widths=widths,heights=heights,ids=ids)
+        self.output = AiOutput(num=num,img_width=IN_SIZE[0],img_height=IN_SIZE[1],types=types,confidences=confidences,lefts=lefts,tops=tops,widths=widths,heights=heights,ids=ids)
 
         cv2.imshow("result", original_frame)
         c = cv2.waitKey(1)
