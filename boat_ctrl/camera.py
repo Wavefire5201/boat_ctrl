@@ -7,7 +7,7 @@ from cv_bridge import CvBridge
 class CameraSubscriber(Node):
     def __init__(self):
         super().__init__("camera_subscriber")
-        self.create_subscription(Image, "/wamv/sensors/cameras/front_left_camera_sensor/optical/image_raw", self.callback, 10)
+        self.create_subscription(Image, "/color/image_raw", self.callback, 1000)
         
     def callback(self, data: Image):
         self.camera_output = CvBridge().imgmsg_to_cv2(data, "bgr8")

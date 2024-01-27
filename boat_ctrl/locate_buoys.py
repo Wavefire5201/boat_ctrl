@@ -19,6 +19,9 @@ class locate_buoys(Node):
         self.current_long = 0
         self.latitudes = []
         self.longitudes = []
+        self.lefts = []
+        self.tops = []
+        self.ids = []
         self.buoy_types = []
         self.quaternion = []
         
@@ -44,12 +47,14 @@ class locate_buoys(Node):
         #string[] types
         self.coordinate_publisher = self.create_publisher(BuoyCoordinates, 'BuoyCoordinates',10)
    
-        timer_period = .5
-        self.timer = self.create_timer(timer_period,self.publish_coordinates)
+        #timer_period = .5
+        #self.timer = self.create_timer(timer_period,self.publish_coordinates)
 
     def camera_callback(self, cameraAi_output:AiOutput):
         self.get_logger().info(str(cameraAi_output))
-        self.latitudes, self.longitudes, self.buoy_types = analyze(cameraAi_output, self.pointCloud,self.current_lat,self.current_long,self.quaternion)
+        self.ids = cameraAi_output.ids
+        self.latitudes, self.longitudes, self.buoy_types, self.lefts, self.tops = analyze(cameraAi_output, self.pointCloud,self.current_lat,self.current_long,self.quaternion)
+        self.publish_coordinates()
 
     def lidar_callback(self,clusterCenters:PointCloud2):
         self.pointCloud = clusterCenters
@@ -62,12 +67,15 @@ class locate_buoys(Node):
         self.quaternion = data.orientation
 
     def publish_coordinates(self):
-        self.coordinate_publisher.publish(BuoyCoordinates(latitudes=self.latitudes,longitudes=self.longitudes,types=self.buoy_types))
+        self.coordinate_publisher.publish(BuoyCoordinates(latitudes=self.latitudes,longitudes=self.longitudes,types=self.buoy_types,lefts=self.lefts,tops=self.tops,ids=self.ids))
 
 def analyze(cameraAi_output,pointCloud,current_lat,current_long,quaternion):
     latitudes = []
     longitudes = []
     buoy_types = []
+    lefts = []
+    tops = []
+
     for i in range(cameraAi_output.num):
         #calculate the 3D angle of each buoy location
         #returns a list of the left/right angle (theta) and the up/down angle (phi) relative to boat
@@ -87,7 +95,11 @@ def analyze(cameraAi_output,pointCloud,current_lat,current_long,quaternion):
         latitudes.append(lat)
         longitudes.append(long)
         buoy_types.append(cameraAi_output.types[i])
-    return latitudes, longitudes, buoy_types
+        lefts.append(cameraAi_output.lefts[i])
+        tops.append(cameraAi_output.tops[i])
+
+
+    return latitudes, longitudes, buoy_types, lefts, tops
 
 
 #calculate the 3D angle of each buoy location
@@ -134,7 +146,8 @@ def get_XYZ_coordinates(theta, phi, pointCloud, name):
        
         #if theta and phi are in list by some closeness
         #keep point, else delete point
-        mask[index] = not (math.fabs(thetaPoint-theta)<=5 and math.fabs(phiPoint-phi)<=5)
+        degrees = 10
+        mask[index] = not (math.fabs(thetaPoint-theta)<=degrees and math.fabs(phiPoint-phi)<=degrees)
     
     points = np.delete(points,mask,axis=0)
 
@@ -163,8 +176,8 @@ def convert_to_lat_long(x,y,current_lat,current_long,q,theta):
     print("northing: "+str(northing))
     rad_earth = 6378.137
     pi = math.pi
-    delta_lat_m = (easting/ ((2 * pi / 360) * rad_earth)) / 1000
-    delta_long_m = (northing/ ((2 * pi / 360) * rad_earth)) / 1000
+    delta_lat_m = (northing/ ((2 * pi / 360) * rad_earth)) / 1000
+    delta_long_m = (easting/ ((2 * pi / 360) * rad_earth)) / 1000
 
     new_lat = current_lat + delta_lat_m
     new_long = current_long + delta_long_m / math.cos(delta_lat_m * (pi/180))
