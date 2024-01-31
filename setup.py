@@ -28,7 +28,8 @@ setup(
             "center_of_clusters = jbc.center_of_clusters:main",
             "tasktwo = jbc.tasktwo:main",
             "average_buoy_location = jbc.average_buoy_location:main",
-            "detect_radius = jbc.detect_radius:main"
+            "detect_radius = jbc.detect_radius:main",
+            "taskone = jbc.taskone:main"
         ],
     },
 )

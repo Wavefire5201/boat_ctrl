@@ -43,12 +43,16 @@ class locate_buoys(Node):
                 PointCloud2, "/center_of_clusters", self.lidar_callback,10)
         
         #subscribes to the GPS location
-        self.gps_subscriber = self.create_subscription(
-                NavSatFix, "/mavros/global_position/global", self.gps_callback,qos_profile)
+        #self.gps_subscriber = self.create_subscription(
+                #NavSatFix, "/mavros/global_position/global", self.gps_callback,qos_profile)
         
+        self.gps_subscriber = self.create_subscription(
+                NavSatFix, "/wamv/sensors/gps/gps/fix", self.gps_callback,qos_profile)
         #subscribes to the boat orientation
+        #self.imu_subscriber = self.create_subscription(
+                #Imu, "/mavros/imu/data", self.imu_callback,qos_profile)
         self.imu_subscriber = self.create_subscription(
-                Imu, "/mavros/imu/data", self.imu_callback,qos_profile)
+                Imu, "/wamv/sensors/imu/imu/data", self.imu_callback,qos_profile)
 
         #publishes buoy coordinates and types
         #float64[] latitudes
@@ -135,7 +139,8 @@ def get_angle(cameraAi_output,index):
     print("degreesPerPixelH: "+str(degreesPerPixelH))
     print("FOV_H: "+str(FOV_H))
     theta = midX * degreesPerPixelH - FOV_H/2
-    phi = midY * degreesPerPixelV - FOV_V/2
+    phi = (midY * degreesPerPixelV - FOV_V/2+15.5)
+    #phi = midY * degreesPerPixelV - FOV_V/2
     print("THETA: "+str(theta))
     #add 15.5 because camera is at slight angle down and the 15.5 corrects for it
     #shouldn't be a problem when the camera is mounted horizontally on the real boat
@@ -165,14 +170,15 @@ def get_XYZ_coordinates(theta, phi, pointCloud, name):
         #keep point, else delete point
         degrees = 5
         if (math.fabs(thetaPoint-theta)<=degrees or math.fabs(phiPoint-phi)<=degrees):
-            print("theta: "+str(theta))
-            print("thetaPoint: "+str(thetaPoint))
-            print("theta-theta: "+str(math.fabs(thetaPoint-theta)))
-            print()
-            print("phi: "+str(phi))
-            print("phiPoint: "+str(phiPoint))
-            print("phi-phi: "+str(math.fabs(phiPoint-phi)))
-            print("\n")
+            #print("theta: "+str(theta))
+            #print("thetaPoint: "+str(thetaPoint))
+            #print("theta-theta: "+str(math.fabs(thetaPoint-theta)))
+            #print()
+            #print("phi: "+str(phi))
+            #print("phiPoint: "+str(phiPoint))
+            #print("phi-phi: "+str(math.fabs(phiPoint-phi)))
+            #print("\n")
+            pass
         mask[index] = not (math.fabs(thetaPoint-theta)<=degrees and math.fabs(phiPoint-phi)<=degrees)
     
     points = np.delete(points,mask,axis=0)
