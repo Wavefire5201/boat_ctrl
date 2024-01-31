@@ -8,6 +8,7 @@ from boat_ctrl.boat_controller import BoatController
 
 import json
 
+
 class TaskOne(Node):
     def __init__(self):
         super().__init__("taskone_node")
@@ -20,7 +21,9 @@ class TaskOne(Node):
 
         self.boat_controller = BoatController()
 
-        self.pole_subscriber = self.create_subscription(String, "/taskone/poles", self.callback, 10)
+        self.pole_subscriber = self.create_subscription(
+            String, "/taskone/poles", self.callback, 10
+        )
 
         self.start = False
 
@@ -30,13 +33,16 @@ class TaskOne(Node):
             self.start = True
 
         poles = json.loads(data.data)
+
+        # Screen middle is the x size of the camera output divided by 2
         SCREEN_MIDDLE = 640 / 2
-        
-        # If it doesn't detect more than one pole, then pass so it doesn't crash
+
+        # If it doesn't detect more than one pole, rotate in place to try to find buoys
         if len(poles) < 2:
-            print("Only one or no pole found")
-            self.boat_controller.set_linear_velocity(0.0)
-            self.boat_controller.set_angular_velocity(0.0)
+            print("Only one or no pole found, rotating to try to locate buoys...")
+            self.boat_controller.set_forward_velocity(0.0)
+            self.boat_controller.set_angular_velocity(0.1)
+            self.boat_controller.cmd_vel_publisher.publish(self.boat_controller.cmd_vel)
             return
 
         # Sort the list of poles by area in descending order
@@ -58,8 +64,10 @@ class TaskOne(Node):
             right_buoy = poles[1]
 
         # Calculate middle of two poles
-        buoy_middle = left_buoy["x_right"] + ((right_buoy["x_left"] - left_buoy["x_right"]) / 2)
-        
+        buoy_middle = left_buoy["x_right"] + (
+            (right_buoy["x_left"] - left_buoy["x_right"]) / 2
+        )
+
         # If both poles are on left side of boat, angle towards left
         # Vice versa for poles on right side of screen
 
@@ -90,9 +98,8 @@ class TaskOne(Node):
             print("MOVING FORWARD")
             self.boat_controller.set_linear_velocity(10.0)
 
+        # Publish velocity
         self.boat_controller.cmd_vel_publisher.publish(self.boat_controller.cmd_vel)
-
-    
 
 
 def main(args=None):
@@ -103,8 +110,6 @@ def main(args=None):
 
     taskone.destroy_node()
     rclpy.shutdown()
-
-
 
 
 if __name__ == "__main__":
