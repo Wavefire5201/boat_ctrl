@@ -28,7 +28,7 @@ setup(
             "tasktwo = jbc.tasktwo:main",
             "average_buoy_location = jbc.average_buoy_location:main",
             "detect_radius = jbc.detect_radius:main",
-            "boat_taskone_waypoint = jbc.taskone:main",
+            "taskone = jbc.taskone:main",
         ],
     },
 )

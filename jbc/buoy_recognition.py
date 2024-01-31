@@ -16,13 +16,14 @@ import numpy as np
 from collections import defaultdict
 #from rgb import colors
 
-model = YOLO(f"/root/ros_ws/src/jbc/jbc/best.pt")
+#model = YOLO(f"/root/ros_ws/src/jbc/jbc/best.pt")
+model = YOLO(f"/root/roboboat_ws/src/jbc/jbc/best.pt")
 #model.to("cuda")
 class CameraSubscriber(Node):
     def __init__(self):
         super().__init__("camera_subscriber")
-        #self.create_subscription(Image, "/wamv/sensors/cameras/front_left_camera_sensor/optical/image_raw", self.callback, 10)
-        self.create_subscription(Image, "/color/image_raw", self.callback, 10)
+        #self.create_subscription(Image, "/color/image_raw", self.callback, 10)
+        self.create_subscription(Image, "/wamv/sensors/cameras/front_left_camera_sensor/optical/image_raw", self.callback, 10)
 
         #create publisher that publishes bounding box coordinates and size and buoy type
         #int32 num -- um of buoys
