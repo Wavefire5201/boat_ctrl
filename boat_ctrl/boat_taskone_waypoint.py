@@ -12,6 +12,7 @@ from rclpy.qos import (
 )
 
 from mavros_msgs.srv import CommandHome
+from mavros_msgs.msg import WaypointReached
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import String
 from geographic_msgs.msg import GeoPoseStamped
@@ -46,6 +47,7 @@ class TaskoneWaypoint(Node):
 
         self.current_waypoint_goal = []
         self.gates = []
+        self.gate_found = False
 
         self.set_home_service = self.create_client(CommandHome, "/mavros/cmd/set_home")
         self.waypoint_publisher = self.create_publisher(
@@ -66,6 +68,12 @@ class TaskoneWaypoint(Node):
             self.gps_callback,
             qos_profile=self.qos_profile,
         )
+        self.create_subscription(
+            WaypointReached,
+            "/mavros/mission/reached",
+            self.waypoint_reached_callback,
+            10,
+        )
 
     def taskone_waypoints_callback(self, data: BuoyCoordinates):
         lat = data.latitudes[0]
@@ -78,6 +86,37 @@ class TaskoneWaypoint(Node):
     def gps_callback(self, data: NavSatFix):
         self.current_lat = data.latitude
         self.current_long = data.longitude
+
+    def waypoint_reached_callback(self, data: WaypointReached):
+        # if self.gate_found:
+        #     self.gates.append(1)
+        #     self.gate_found = False
+        #     print("gate reached")
+        #     self.boat_controller.set_forward_velocity(0.0)
+        #     self.boat_controller.set_angular_velocity(0.0)
+        #     self.boat_controller.cmd_vel_publisher.publish(self.boat_controller.cmd_vel)
+        #     time.sleep(5)
+        #     self.set_waypoint(
+        #         self.current_waypoint_goal[0], self.current_waypoint_goal[1]
+        #     )
+        # else:
+        #     self.boat_controller.set_forward_velocity(0.0)
+        #     self.boat_controller.set_angular_velocity(0.0)
+        #     self.boat_controller.cmd_vel_publisher.publish(self.boat_controller.cmd_vel)
+        #     time.sleep(5)
+        #     self.set_waypoint(
+        #         self.current_waypoint_goal[0], self.current_waypoint_goal[1]
+        #     )
+        reached = data.wp_seq
+
+        # TODO
+        """
+        Topics to investigate:
+        /mavros/mission/reached
+        /mavros/mission/waypoints
+        /mavros/global_position/set_gp_origin
+        /mavros/geofence/fences
+        """
 
     def set_home(self):
         request = CommandHome.Request()
@@ -137,9 +176,10 @@ class TaskoneWaypoint(Node):
                 and len(self.gates) < 2
             ):
                 print("gate found")
-                self.set_waypoint(
-                    self.current_waypoint_goal[0], self.current_waypoint_goal[1]
-                )
+                self.gate_found = True
+                # self.set_waypoint(
+                #     self.current_waypoint_goal[0], self.current_waypoint_goal[1]
+                # )
         elif poles[0]["x_left"] < poles[1]["x_left"]:
             left_buoy = poles[0]
             right_buoy = poles[1]
@@ -150,9 +190,10 @@ class TaskoneWaypoint(Node):
                 and len(self.gates) < 2
             ):
                 print("gate found")
-                self.set_waypoint(
-                    self.current_waypoint_goal[0], self.current_waypoint_goal[1]
-                )
+                self.gate_found = True
+                # self.set_waypoint(
+                #     self.current_waypoint_goal[0], self.current_waypoint_goal[1]
+                # )
 
         # Calculate middle of two poles
         buoy_middle = left_buoy["x_right"] + (
@@ -189,6 +230,10 @@ class TaskoneWaypoint(Node):
             print("BOAT IS CENTERED")
             # print("MOVING FORWARD")
             # self.boat_controller.set_linear_velocity(10.0)
+            if self.gate_found:
+                self.set_waypoint(
+                    self.current_waypoint_goal[0], self.current_waypoint_goal[1]
+                )
 
         # Publish velocity
         self.boat_controller.cmd_vel_publisher.publish(self.boat_controller.cmd_vel)
